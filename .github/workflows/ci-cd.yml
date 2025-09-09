@@ -1,0 +1,25 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v3
+
+      - name: Python einrichten
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Abhängigkeiten installieren
+        run: pip install --upgrade pip && pip install -r backend/requirements.txt
+
+      - name: Tests ausführen
+        run: pytest backend/
