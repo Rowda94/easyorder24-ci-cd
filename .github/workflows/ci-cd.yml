@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline with Monitoring
 
 on:
   push:
@@ -82,6 +82,29 @@ jobs:
       - name: Deploy Frontend Canary
         run: kubectl apply -f frontend/canary-deployment.yaml
 
+  monitoring:
+    name: Collect Metrics and Update Dashboards
+    runs-on: ubuntu-latest
+    needs: production
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Fetch Deployment Metrics
+        run: |
+          kubectl get pods -o wide --namespace=production
+          kubectl get deployments --namespace=production
+          kubectl top pods --namespace=production || echo "Metrics server not configured"
+
+      - name: Export Metrics to Prometheus
+        run: |
+          echo "Updating Prometheus metrics..." 
+          # Optional: Add your custom scripts to push metrics
+
+      - name: Update Grafana Dashboard
+        run: |
+          echo "Updating Grafana dashboard with latest metrics..."
+          # Optional: Use Grafana API to update panels or dashboards
 
 
 
