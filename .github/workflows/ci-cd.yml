@@ -113,6 +113,17 @@ jobs:
           docker rm -f production-backend || true
           docker run -d -p 80:5000 --name production-backend ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest
 
+  cleanup:
+    name: Cleanup Docker
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+
+    steps:
+      - name: Remove stopped containers
+        run: docker container prune -f
+
+      - name: Remove dangling images
+        run: docker image prune -f
 
 
 
