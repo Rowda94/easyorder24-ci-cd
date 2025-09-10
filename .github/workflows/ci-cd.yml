@@ -72,6 +72,11 @@ jobs:
       - name: Push Docker Image to Staging
         run: docker push ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:staging
 
+      - name: Run Staging Container
+        run: |
+          docker rm -f staging-backend || true
+          docker run -d -p 5000:5000 --name staging-backend ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:staging
+
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -93,6 +98,7 @@ jobs:
 
       - name: Push Docker Image to Production
         run: docker push ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest
+
 
 
 
