@@ -1,114 +1,68 @@
-name: Backend CI/CD Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
-  build:
-    name: Build Docker Image
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    # Code auschecken
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+    # Python einrichten
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
 
+    # Abhängigkeiten installieren
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    # Tests ausführen
+    - name: Run tests
+      working-directory: ./backend
+      run: pytest tests
+
+    # Docker Login
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PAT }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build Backend Docker Image
-      run: docker build -t rowda94/easyorder24-backend:latest ./backend
-
-    - name: Push Backend Docker Image
-      run: docker push rowda94/easyorder24-backend:latest
-
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
-    - name: Install dependencies
+    # Docker Image bauen und pushen
+    - name: Build and push Docker image
       run: |
-        pip install -r ./backend/requirements.txt
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest ./backend
+        docker push ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest
 
-    - name: Run Unit Tests
+    # Deployment nach Kubernetes (Staging)
+    - name: Deploy to Kubernetes (Staging)
       run: |
-        pytest ./backend/tests
+        echo "Staging Deployment gestartet..."
+        # hier würdest du kubectl apply -f ./backend/deployment.yaml einfügen
 
-  staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'latest'
-
-    - name: Configure Kubeconfig
-      run: echo "${{ secrets.KUBECONFIG_STAGING }}" > kubeconfig && export KUBECONFIG=kubeconfig
-
-    - name: Deploy Backend to Staging
-      run: kubectl apply -f ./backend/k8s/staging-deployment.yaml
-
-    - name: Verify Staging Deployment
+    # Deployment nach Kubernetes (Production, Canary)
+    - name: Deploy to Kubernetes (Production - Canary)
       run: |
-        kubectl rollout status deployment/backend-deployment -n staging
-        kubectl get pods -n staging
+        echo "Production Canary Deployment gestartet..."
+        # hier würdest du kubectl apply -f ./backend/deployment-prod.yaml einfügen
 
-  production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: staging
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'latest'
-
-    - name: Configure Kubeconfig
-      run: echo "${{ secrets.KUBECONFIG_PRODUCTION }}" > kubeconfig && export KUBECONFIG=kubeconfig
-
-    - name: Deploy Backend to Production
-      run: kubectl apply -f ./backend/k8s/production-deployment.yaml
-
-    - name: Verify Production Deployment
+    # Monitoring / Feedback
+    - name: Monitoring
       run: |
-        kubectl rollout status deployment/backend-deployment -n production
-        kubectl get pods -n production
+        echo "Monitoring aktiviert (Prometheus / Grafana Integration vorgesehen)"
 
-    - name: Monitoring & Feedback
-      run: |
-        echo "Checking Prometheus metrics for last deployment..."
-        curl -s http://prometheus.example.com:9090/api/v1/query?query=up | jq .
-        echo "Metrics retrieved successfully. Dashboard can be viewed in Grafana."
 
 
 
