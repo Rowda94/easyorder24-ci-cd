@@ -7,63 +7,95 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-test-deploy:
+  # Phase 1: Build
+  build:
+    name: Build
     runs-on: ubuntu-latest
-
     steps:
-    # Code auschecken
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Python einrichten
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # Abhängigkeiten installieren
-    - name: Install dependencies
-      working-directory: ./backend
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest ./backend
 
-    # Tests ausführen
-    - name: Run tests
-      working-directory: ./backend
-      run: pytest tests
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest
 
-    # Docker Login
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PAT }}
+  # Phase 2: Test
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Docker Image bauen und pushen
-    - name: Build and push Docker image
-      run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest ./backend
-        docker push ${{ secrets.DOCKER_USERNAME }}/easyorder24-backend:latest
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    # Deployment nach Kubernetes (Staging)
-    - name: Deploy to Kubernetes (Staging)
-      run: |
-        echo "Staging Deployment gestartet..."
-        # hier würdest du kubectl apply -f ./backend/deployment.yaml einfügen
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # Deployment nach Kubernetes (Production, Canary)
-    - name: Deploy to Kubernetes (Production - Canary)
-      run: |
-        echo "Production Canary Deployment gestartet..."
-        # hier würdest du kubectl apply -f ./backend/deployment-prod.yaml einfügen
+      - name: Run tests
+        working-directory: ./backend
+        run: pytest tests
 
-    # Monitoring / Feedback
-    - name: Monitoring
-      run: |
-        echo "Monitoring aktiviert (Prometheus / Grafana Integration vorgesehen)"
+  # Phase 3: Staging Deployment
+  staging:
+    name: Staging Deployment
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
+      - name: Deploy to Kubernetes (Staging)
+        run: |
+          echo "🚀 Staging Deployment gestartet..."
+          # kubectl apply -f ./backend/deployment.yaml
 
+  # Phase 4: Production Deployment
+  production:
+    name: Production Deployment (Canary)
+    runs-on: ubuntu-latest
+    needs: staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
+      - name: Deploy to Kubernetes (Production - Canary)
+        run: |
+          echo "🚀 Production Canary Deployment gestartet..."
+          # kubectl apply -f ./backend/deployment-prod.yaml
+
+  # Phase 5: Monitoring & Feedback
+  monitoring:
+    name: Monitoring & Feedback
+    runs-on: ubuntu-latest
+    needs: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Simulated Monitoring
+        run: |
+          echo "📊 Monitoring gestartet..."
+          echo "Prometheus Metrics abfragen..."
+          echo "Grafana Dashboard aktualisieren..."
+          # curl http://prometheus-server/api/v1/query?query=up
+          # Optional: Alerts prüfen oder Health-Endpoint abfragen
 
 
