@@ -1,10 +1,12 @@
-from flask import Flask, jsonify
+import pytest
+from app import app
 
-app = Flask(__name__)
+@pytest.fixture
+def client():
+    with app.test_client() as client:
+        yield client
 
-@app.route('/')
-def home():
-    return jsonify({"message": "EasyOrder24 Backend läuft!"})
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+def test_index(client):
+    """Testet, ob die Startseite einen 200-Statuscode liefert"""
+    response = client.get('/')
+    assert response.status_code == 200
