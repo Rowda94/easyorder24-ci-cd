@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-staging
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+      env: staging
+  template:
+    metadata:
+      labels:
+        app: backend
+        env: staging
+    spec:
+      containers:
+        - name: backend
+          image: rowda94/easyorder24-backend:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: FLASK_ENV
+              value: "staging"

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-production
+  labels:
+    app: backend
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: backend
+      env: production
+  template:
+    metadata:
+      labels:
+        app: backend
+        env: production
+    spec:
+      containers:
+        - name: backend
+          image: rowda94/easyorder24-backend:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: FLASK_ENV
+              value: "production"
